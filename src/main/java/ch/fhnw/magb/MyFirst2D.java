@@ -48,7 +48,7 @@ public class MyFirst2D extends GLBase1
                             float w, float h)                   // Stamm
     {  pushMatrix(gl);
        zeichneDreieck(gl,-a,0,0, a,0,0, 0,b,0);
-       multMatrix(gl,Mat4.translate(0,-0.5f*h,0));
+       translate(gl,0,-0.5f*h,0);
        zeichneViereck(gl,w,h);
        popMatrix(gl);
     }
@@ -64,7 +64,6 @@ public class MyFirst2D extends GLBase1
        gl.glDisable(GL3.GL_DEPTH_TEST);                  // ohne Sichtbarkeits-Test
     }
 
-
     @Override
     public void display(GLAutoDrawable drawable)
     { GL3 gl = drawable.getGL().getGL3();
@@ -73,7 +72,18 @@ public class MyFirst2D extends GLBase1
       setColor(0,1,1);
       float a = 0.45f, b=1.5f;
       float w = 0.21f, h=2.4f;
-      zeichnePfeil(gl,a,b,w,h);
+      float phi = 28f;
+      float x = 0.03f;
+            
+      // Vektorspirale
+      for(int i = 0; i < 100; i++) {
+          pushMatrix(gl);
+          rotate(gl, i * phi, 0, 0, 1);
+          translate(gl, 1 + x * i, 0, 0);
+          scale(gl, 0.1f + i * 0.001f);
+          zeichnePfeil(gl, a, b, w, h);
+          popMatrix(gl);          
+      }
     }
 
 
@@ -92,7 +102,7 @@ public class MyFirst2D extends GLBase1
 
     //  -----------  main-Methode  ---------------------------
 
-    public static void run(String[] args)
+    public static void main(String[] args)
     { new MyFirst2D();
     }
 

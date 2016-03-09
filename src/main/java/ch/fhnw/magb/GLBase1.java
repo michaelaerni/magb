@@ -45,10 +45,12 @@ public class GLBase1
     FloatBuffer vertexBuf;                                     // Vertex-Array
     final int vPositionSize = 4*Float.SIZE/8;                  // Anz. Bytes der x,y,z,w (homogene Koordinaten)
     final int vColorSize = 4*Float.SIZE/8;                     // Anz. Bytes der rgba Werte
-    final int vertexSize = vPositionSize + vColorSize;         // Anz. Bytes eines Vertex
+    final int vNormalSize = 4*Float.SIZE/8;
+    final int vertexSize = vPositionSize + vColorSize + vNormalSize; // Anz. Bytes eines Vertex
     int bufSize;                                               // Anzahl Bytes des VertexArrays = maxVerts * vertexSize
 
     float[] currentColor = { 1,1,1,1};                         // aktuelle Farbe fuer Vertices
+    float[] currentNormal = {1, 1, 1, 0};
 
 
     // ------ Identifiers fuer OpenGL-Objekte und Shader-Variablen  ------
@@ -56,8 +58,8 @@ public class GLBase1
     int programId;                                             // Program-Object
     int vaoId;                                                 // Identifier fuer OpenGL VertexArray Object
     int vertexBufId;                                           // Identifier fuer OpenGL Vertex Buffer
-    int modelViewMatrixLoc, projMatrixLoc;                     // Uniform Shader Variables
-    int vPositionLocation, vColorLocation;                     // Vertex Attribute Shader Variables
+    int modelViewMatrixLoc, projMatrixLoc, shadingLevelLoc, lightPositionLoc;                     // Uniform Shader Variables
+    int vPositionLocation, vColorLocation, vNormal;            // Vertex Attribute Shader Variables
 
 
     //  ------------- Konstruktoren  ---------------------------
@@ -117,12 +119,15 @@ public class GLBase1
        // ----- get shader variable identifiers  -------------
        vPositionLocation = gl.glGetAttribLocation(pgm, "vertexPosition");
        vColorLocation = gl.glGetAttribLocation(pgm, "vertexColor");
+       vNormal = gl.glGetAttribLocation(pgm, "vertexNormal");
 
        //  ------  enable vertex attributes ---------------
        gl.glEnableVertexAttribArray(vPositionLocation);
        gl.glEnableVertexAttribArray(vColorLocation);
+       gl.glEnableVertexAttribArray(vNormal);
        gl.glVertexAttribPointer(vPositionLocation, 4, GL3.GL_FLOAT, false, vertexSize, 0);
        gl.glVertexAttribPointer(vColorLocation, 4, GL3.GL_FLOAT, false, vertexSize, vPositionSize);
+       gl.glVertexAttribPointer(vNormal, 4, GL3.GL_FLOAT, false, vertexSize, vPositionSize + vColorSize);
     };
 
 
@@ -131,6 +136,9 @@ public class GLBase1
        // ----- get shader variable identifiers  -------------
        modelViewMatrixLoc = gl.glGetUniformLocation(pgm, "modelViewMatrix");
        projMatrixLoc = gl.glGetUniformLocation(pgm, "projMatrix");
+       
+       lightPositionLoc = gl.glGetUniformLocation(pgm, "lightPosition");
+       shadingLevelLoc = gl.glGetUniformLocation(pgm, "ShadingLevel");
 
        // -----  set uniform variables  -----------------------
        gl.glUniformMatrix4fv(modelViewMatrixLoc, 1, false, M.toArray(), 0);
@@ -157,6 +165,23 @@ public class GLBase1
        currentColor[2] = b;
        currentColor[3] = 1;
     }
+    
+    public void setLightPosition(GL3 gl, Vec3 position) {
+        Vec4 temp = new Vec4(position.x, position.y, position.z, 1);
+        Vec4 lightPosition = getModelViewMatrix(gl).transform(temp);
+        gl.glUniform4fv(lightPositionLoc, 1, lightPosition.toArray(), 0);
+    }
+    
+    public void setShadingLevel(GL3 gl, ShadingLevel level) {
+        gl.glUniform1i(shadingLevelLoc, level.ordinal());
+    }
+    
+    public void setNormal(Vec3 normal) {
+        this.currentNormal[0] = normal.x;
+        this.currentNormal[1] = normal.y;
+        this.currentNormal[2] = normal.z;
+        this.currentNormal[3] = 0;
+    }
 
     public void putVertex(float x, float y, float z)            // Vertex-Daten in Buffer speichern
     {  vertexBuf.put(x);
@@ -164,6 +189,7 @@ public class GLBase1
        vertexBuf.put(z);
        vertexBuf.put(1);
        vertexBuf.put(currentColor);                             // Farbe
+       vertexBuf.put(currentNormal);
     }
 
     public void copyBuffer(GL3 gl,int nVertices)                // Vertex-Array in OpenGL-Buffer kopieren
@@ -278,6 +304,7 @@ public class GLBase1
        putVertex(0,0,c);
        int nVertices = 6;
        copyBuffer(gl, nVertices);
+       this.setShadingLevel(gl, ShadingLevel.None);
        gl.glDrawArrays(GL3.GL_LINES, 0, nVertices);
     }
 
@@ -286,13 +313,22 @@ public class GLBase1
     public void zeichneDreieck(GL3 gl, float x1, float y1, float z1,
                              float x2, float y2, float z2,
                              float x3, float y3, float z3)
-    {  rewindBuffer(gl);
-       putVertex(x1,y1,z1);           // Eckpunkte in VertexArray speichern
-       putVertex(x2,y2,z2);
-       putVertex(x3,y3,z3);
-       int nVertices = 3;
-       copyBuffer(gl, nVertices);
-       gl.glDrawArrays(GL3.GL_TRIANGLES, 0, nVertices);
+    {
+        zeichneDreieck(gl, new Vec3(x1, y1, z1), new Vec3(x2, y2, z2), new Vec3(x3, y3, z3));
+    }
+    
+    public void zeichneDreieck(GL3 gl, Vec3 a, Vec3 b, Vec3 c) {
+        rewindBuffer(gl);
+        Vec3 u = b.subtract(a);
+        Vec3 v = c.subtract(a);
+        Vec3 normal = u.cross(v).normalize();
+        setNormal(normal);
+        putVertex(a.x, a.y, a.z);
+        putVertex(b.x, b.y, b.z);
+        putVertex(c.x, c.y, c.z);
+        int nVertices = 3;
+        copyBuffer(gl, nVertices);
+        gl.glDrawArrays(GL3.GL_TRIANGLES, 0, nVertices);
     }
 
 

@@ -53,6 +53,7 @@ public class MyFirst3D extends GLBase1
       setColor(1,0,0);
       zeichneDreieck(gl,3,2,4,5,1.8f,8,5,2,3);
       setColor(0.2f,0.2f,0.2f);
+      rotate(gl, 60, 0, 1, 0);
       zeichneDreieck(gl,3,0,4,5,0,8,5,0,3);
     }
 
@@ -74,7 +75,7 @@ public class MyFirst3D extends GLBase1
 
     //  -----------  main-Methode  ---------------------------
 
-    public static void run(String[] args)
+    public static void main(String[] args)
     { new MyFirst3D();
     }
 
